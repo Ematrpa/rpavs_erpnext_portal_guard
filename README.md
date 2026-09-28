@@ -2,7 +2,8 @@
 
 Frappe app that keeps RPA app users out of the ERPNext desk/portal and sends them to
 https://app.rpavirtualstaffing.com. The only ERPNext pages they can still open are
-`/login` and the OAuth2 authorize flow, so "Sign in" from the app keeps working.
+`/login`, the OAuth2 authorize flow (so "Sign in" from the app keeps working) and
+`/helpdesk/*` (including the API calls the Helpdesk pages make).
 
 ## Install (self-hosted bench)
 
@@ -23,7 +24,8 @@ Users who skip the redirect:
     "rpa_portal_guard_enabled": 0,          // emergency off switch
     "rpa_app_url": "https://app.rpavirtualstaffing.com",
     "rpa_portal_bypass_roles": ["ERP Portal Access", "System Manager"],
-    "rpa_portal_bypass_users": ["someone@rpapm.com"]
+    "rpa_portal_bypass_users": ["someone@rpapm.com"],
+    "rpa_portal_allowed_sections": ["/helpdesk"]
 
 ## Recommended
 

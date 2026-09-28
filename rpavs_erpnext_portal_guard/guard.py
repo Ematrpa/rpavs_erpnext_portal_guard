@@ -2,8 +2,13 @@
 Keep RPA app users out of the ERPNext desk/portal.
 
 Users who log in to ERPNext with a browser session (cookie) may only reach the
-login page and the OAuth2 authorize flow. Every other page redirects to the RPA
-app, and every other API call made with the session cookie gets a 403.
+login page, the OAuth2 authorize flow and the allowed sections (Helpdesk by
+default). Every other page redirects to the RPA app, and every other API call
+made with the session cookie gets a 403.
+
+API calls made from an allowed section's page (Referer under /helpdesk) are let
+through, since the Helpdesk SPA uses the regular /api endpoints. ERPNext
+permissions still apply to those calls.
 
 The RPA backend proxy is not affected: it calls ERPNext with
 `Authorization: Bearer <token>`, which carries no session cookie, so at
@@ -19,7 +24,10 @@ site_config.json options (all optional):
   "rpa_app_url": "https://app.rpavirtualstaffing.com"
   "rpa_portal_bypass_roles": ["ERP Portal Access", "System Manager"]
   "rpa_portal_bypass_users": ["someone@rpapm.com"]
+  "rpa_portal_allowed_sections": ["/helpdesk"]
 """
+
+from urllib.parse import urlparse
 
 import frappe
 from werkzeug.exceptions import Forbidden, abort
@@ -32,8 +40,12 @@ DEFAULT_BYPASS_ROLES = [DEFAULT_BYPASS_ROLE, "System Manager"]
 # Pages a blocked user may still open (needed for sign-in from the app).
 ALLOWED_PAGE_PATHS = {"/login"}
 
-# Static files the login / OAuth pages need.
-ALLOWED_PREFIXES = ("/assets/", "/files/")
+# Static files the login / OAuth / Helpdesk pages need.
+ALLOWED_PREFIXES = ("/assets/", "/files/", "/private/files/")
+
+# Sections blocked users may use: the path itself, anything below it, and
+# API calls made from its pages.
+DEFAULT_ALLOWED_SECTIONS = ["/helpdesk"]
 
 # API methods a blocked user may call with the session cookie.
 ALLOWED_METHOD_PREFIXES = (
@@ -61,6 +73,12 @@ def enforce():
     if _is_allowed(path):
         return
 
+    sections = frappe.conf.get("rpa_portal_allowed_sections") or DEFAULT_ALLOWED_SECTIONS
+    if _in_section(path, sections):
+        return
+    if path.startswith("/api/") and _in_section(_referer_path(request), sections):
+        return
+
     if path.startswith("/api/") or _is_ajax(request):
         raise Forbidden("ERPNext access is disabled for this user.")
 
@@ -83,6 +101,20 @@ def _is_allowed(path: str) -> bool:
         method = path[len("/api/method/") :]
         return method.startswith(ALLOWED_METHOD_PREFIXES)
     return False
+
+
+def _in_section(path: str, sections) -> bool:
+    return any(path == s or path.startswith(s.rstrip("/") + "/") for s in sections)
+
+
+def _referer_path(request) -> str:
+    referer = request.headers.get("Referer")
+    if not referer:
+        return ""
+    parsed = urlparse(referer)
+    if parsed.netloc and parsed.netloc != request.host:
+        return ""
+    return parsed.path.rstrip("/") or "/"
 
 
 def _is_ajax(request) -> bool:
