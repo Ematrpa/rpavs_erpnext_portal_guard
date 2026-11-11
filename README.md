@@ -23,6 +23,7 @@ Users who skip the redirect:
 
     "rpa_portal_guard_enabled": 0,          // emergency off switch
     "rpa_app_url": "https://app.rpavirtualstaffing.com",
+    "rpa_app_extra_urls": ["http://localhost:3039"],  // other frontends allowed as logout redirect_to
     "rpa_portal_bypass_roles": ["ERP Portal Access", "System Manager"],
     "rpa_portal_bypass_users": ["someone@rpapm.com"],
     "rpa_portal_allowed_sections": ["/helpdesk"]
@@ -31,3 +32,11 @@ Users who skip the redirect:
 
 In the OAuth Client used by the app, turn on **Skip Authorization**. That way users never
 see the ERPNext consent screen.
+
+## Logout endpoint
+
+`GET /api/method/rpavs_erpnext_portal_guard.api.logout[?redirect_to=<url>]` ends the browser's
+ERPNext session and redirects to `<rpa_app_url>/sign-in`. The RPA app sends the browser here when a
+user must sign in with a different account (Switch account), so ERPNext asks for credentials
+instead of reusing the current session. `redirect_to` is used only if its origin is `rpa_app_url`
+or one of `rpa_app_extra_urls`.

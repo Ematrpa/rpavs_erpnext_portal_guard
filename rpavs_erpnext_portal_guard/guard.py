@@ -54,6 +54,7 @@ ALLOWED_METHOD_PREFIXES = (
     "frappe.integrations.oauth2.",  # authorize, approve, get_token, openid_profile...
     "frappe.www.login.",
     "frappe.auth.get_logged_user",
+    "rpavs_erpnext_portal_guard.api.logout",  # logout from the RPA app
 )
 
 
